@@ -1,7 +1,7 @@
 import { timedOrders } from "./data"
-import { DataTimedOrder } from "../types"
+import type { TimedOrder } from "../types"
 
-export const fetchTimedOrders = async (): Promise<DataTimedOrder[]> => {
+export const fetchTimedOrders = async (): Promise<TimedOrder[]> => {
     return new Promise(resolve => {
         setTimeout(() => {
             resolve(timedOrders)

@@ -4,42 +4,66 @@ import { fetchTimedOrders } from "../mock/api";
 import type { TimedOrder } from "../types";
 
 type TimedOrderContextValue = [
-    state: TimedOrder[],
+    state: {
+        timedOrders: TimedOrder[];
+        currentDate: string;
+        currentSelectedOrder: number;
+    },
     actions: {
         handleOrder: (index: number) => void;
+        handleSetCurrentDate: (currentDate: string) => void;
     }
 ]
 
-const defaultState: TimedOrder[] = []
+const defaultState = {
+    timedOrders: [],
+    currentDate: 'TODAY',
+    currentSelectedOrder: -1
+}
 
 const TimedOrderContext = createContext<TimedOrderContextValue>([
     defaultState,
     {
-        handleOrder: () => undefined
+        handleOrder: () => undefined,
+        handleSetCurrentDate: () => undefined
     }
 ])
 
 export const TimedOrderContextProvider: ParentComponent = (props) => {
-    const [state, setState] = createStore<TimedOrder[]>([])
+    const [state, setState] = createStore<{ timedOrders: TimedOrder[], currentDate: string, currentSelectedOrder: number }>(defaultState)
 
     const handleOrder = (index: number) => {
-        setState([
-            ...state.slice(0, index),
-            { ...state[index], capacity: state[index].booked ? state[index].capacity + 1 : state[index].capacity - 1, booked: !state[index].booked },
-            ...state.slice(index + 1)
-        ])
+        const { timedOrders, currentSelectedOrder } = state;
+
+        let updatedTimedOrders = [...timedOrders];
+
+        if (currentSelectedOrder === index) {
+            updatedTimedOrders[index] = { ...updatedTimedOrders[index], capacity: updatedTimedOrders[index].capacity + 1 };
+            index = -1;
+        } else {
+            if (currentSelectedOrder !== -1) {
+                updatedTimedOrders[currentSelectedOrder] = { ...updatedTimedOrders[currentSelectedOrder], capacity: updatedTimedOrders[currentSelectedOrder].capacity + 1 };
+            }
+
+            updatedTimedOrders[index] = { ...updatedTimedOrders[index], capacity: updatedTimedOrders[index].capacity - 1 };
+        }
+
+        setState("timedOrders", updatedTimedOrders);
+        setState("currentSelectedOrder", index);
+    }
+
+    const handleSetCurrentDate = (currentDate: string) => {
+        setState("currentDate", currentDate);
     }
 
     createEffect(async () => {
         // call API to fetch timed orders
-        const timedOrders = await fetchTimedOrders()
+        const timedOrders = await fetchTimedOrders();
 
-        setState(timedOrders.map(order => {
-            return { ...order, booked: false }
-        }))
+        setState("timedOrders", timedOrders);
     })
 
-    return <TimedOrderContext.Provider value={[state, { handleOrder }]}>
+    return <TimedOrderContext.Provider value={[state, { handleOrder, handleSetCurrentDate }]}>
         {props.children}
     </TimedOrderContext.Provider>
 }
